@@ -3,7 +3,6 @@ package zerodown
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -52,11 +51,7 @@ func (sh *signalHandler) reload() error {
 
 func (sh *signalHandler) shutdown(ctx context.Context) error {
 	sh.server.SetKeepAlivesEnabled(false)
-	err := sh.server.Shutdown(ctx)
-	if err != nil {
-		log.Printf("关闭服务器失败：%v", err)
-	}
-	return err
+	return sh.server.Shutdown(ctx)
 }
 
 func (sh *signalHandler) handleSignals() error {
