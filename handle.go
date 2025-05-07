@@ -3,12 +3,14 @@ package zerodown
 import (
 	"context"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type signalHandler struct {
@@ -50,7 +52,11 @@ func (sh *signalHandler) reload() error {
 
 func (sh *signalHandler) shutdown(ctx context.Context) error {
 	sh.server.SetKeepAlivesEnabled(false)
-	return sh.server.Shutdown(ctx)
+	err := sh.server.Shutdown(ctx)
+	if err != nil {
+		log.Printf("关闭服务器失败：%v", err)
+	}
+	return err
 }
 
 func (sh *signalHandler) handleSignals() error {
@@ -65,9 +71,6 @@ func (sh *signalHandler) handleSignals() error {
 			case syscall.SIGHUP:
 				continue
 			case syscall.SIGINT:
-				if err := sh.tm.executeShutdownHooks(); err != nil {
-					return err
-				}
 				if err := sh.reload(); err != nil {
 					return err
 				}
@@ -75,7 +78,7 @@ func (sh *signalHandler) handleSignals() error {
 				if err := sh.tm.executeShutdownHooks(); err != nil {
 					return err
 				}
-				shutdownCtx, cancel := context.WithTimeout(context.Background(), sh.config.ShutdownTime)
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), sh.config.ShutdownTime*time.Second)
 				defer cancel()
 				return sh.shutdown(shutdownCtx)
 			}
